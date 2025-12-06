@@ -1,0 +1,17 @@
+{
+  "NEWTYPE": {
+    "Title": "Newtype Engine",
+    "Start": "Newtype Engine 시작",
+    "Stop": "Newtype Engine 정지",
+    "HighlightDetected": "하이라이트 감지!",
+    "Moods": {
+      "combat": "전투",
+      "romance": "로맨스",
+      "drama": "드라마",
+      "comedy": "코미디",
+      "mystery": "미스터리",
+      "celebration": "축제",
+      "neutral": "일상"
+    }
+  }
+}

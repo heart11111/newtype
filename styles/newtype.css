@@ -1,0 +1,22 @@
+/* Newtype Engine Button */
+.newtype-btn {
+  transition: all 0.3s ease;
+}
+
+.newtype-btn:hover {
+  background: rgba(124, 58, 237, 0.2) !important;
+}
+
+.newtype-btn.active {
+  background: #7c3aed !important;
+  color: #ffffff !important;
+}
+
+.newtype-btn i.fa-spin {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

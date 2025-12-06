@@ -1,0 +1,29 @@
+{
+  "id": "newtype",
+  "title": "Newtype - RP Analysis Engine",
+  "description": "실시간 RP 채팅 분석 엔진",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "12",
+    "verified": "13"
+  },
+  "authors": [
+    {
+      "name": "SJ"
+    }
+  ],
+  "scripts": [
+    "scripts/module.js"
+  ],
+  "styles": [
+    "styles/newtype.css"
+  ],
+  "languages": [
+    {
+      "lang": "ko",
+      "name": "Korean",
+      "path": "lang/ko.json"
+    }
+  ],
+  "socket": true
+}
