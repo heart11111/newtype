@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>황제서버 로그</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: #0f0f1a;
+            color: #eee;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #7c3aed;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h1::before {
+            content: '🧠';
+        }
+        .server-url {
+            background: #1a1a2e;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        .server-url input {
+            background: transparent;
+            border: none;
+            color: #7c3aed;
+            font-family: inherit;
+            font-size: inherit;
+            width: 300px;
+        }
+        .server-url input:focus {
+            outline: none;
+        }
+        .status {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .status-item {
+            background: #1a1a2e;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .status-dot.online { background: #22c55e; }
+        .status-dot.offline { background: #ef4444; }
+        .status-dot.checking { background: #f59e0b; animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .log-container {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 65vh;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 10px 0;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            gap: 12px;
+            font-size: 0.9rem;
+            align-items: flex-start;
+        }
+        .log-entry:last-child { border-bottom: none; }
+        .log-time {
+            color: #666;
+            min-width: 70px;
+            flex-shrink: 0;
+        }
+        .log-server {
+            min-width: 80px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .log-server.Newtype { color: #7c3aed; }
+        .log-server.Ollama { color: #22c55e; }
+        .log-server.n8n { color: #f97316; }
+        .log-server.System { color: #3b82f6; }
+        .log-server.Error { color: #ef4444; }
+        .log-message {
+            color: #ccc;
+            word-break: break-word;
+        }
+        .empty {
+            color: #666;
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            color: #666;
+            font-size: 0.8rem;
+        }
+        .footer button {
+            background: #2a2a4a;
+            border: none;
+            color: #aaa;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .footer button:hover {
+            background: #3a3a5a;
+            color: #fff;
+        }
+        .connection-error {
+            background: #2d1f1f;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>황제서버 로그</h1>
+
+    <div class="server-url">
+        서버: <input type="text" id="serverUrl" value="http://140.245.68.52:8000" />
+        <button onclick="updateServer()" style="margin-left:10px;background:#7c3aed;border:none;color:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;">연결</button>
+    </div>
+
+    <div class="connection-error" id="error">
+        서버에 연결할 수 없습니다. 서버 주소를 확인해주세요.
+    </div>
+
+    <div class="status" id="status">
+        <div class="status-item">
+            <div class="status-dot checking" id="dot-newtype"></div>
+            <span>Newtype: 8000</span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot checking" id="dot-ollama"></div>
+            <span>Ollama: 11434</span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot checking" id="dot-n8n"></div>
+            <span>n8n: 5678</span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot checking" id="dot-filebrowser"></div>
+            <span>Filebrowser: 8080</span>
+        </div>
+    </div>
+
+    <div class="log-container" id="logs">
+        <div class="empty">서버에 연결 중...</div>
+    </div>
+
+    <div class="footer">
+        <span id="refresh-info">3초마다 자동 새로고침</span>
+        <button onclick="clearLogs()">로그 지우기 (화면만)</button>
+    </div>
+
+    <script>
+        let SERVER_URL = 'http://140.245.68.52:8000';
+        let logs = [];
+
+        function updateServer() {
+            SERVER_URL = document.getElementById('serverUrl').value.replace(/\/$/, '');
+            fetchLogs();
+            checkStatus();
+        }
+
+        async function fetchLogs() {
+            try {
+                const res = await fetch(`${SERVER_URL}/api/logs`);
+                logs = await res.json();
+                document.getElementById('error').style.display = 'none';
+                renderLogs();
+            } catch (e) {
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('logs').innerHTML = '<div class="empty">연결 실패</div>';
+            }
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('logs');
+
+            if (logs.length === 0) {
+                container.innerHTML = '<div class="empty">아직 로그가 없습니다</div>';
+                return;
+            }
+
+            container.innerHTML = [...logs].reverse().map(log => `
+                <div class="log-entry">
+                    <span class="log-time">${log.time}</span>
+                    <span class="log-server ${log.server}">${log.server}</span>
+                    <span class="log-message">${escapeHtml(log.message)}</span>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function clearLogs() {
+            logs = [];
+            renderLogs();
+        }
+
+        async function checkStatus() {
+            const baseUrl = SERVER_URL.replace(':8000', '');
+
+            // Newtype
+            checkService('dot-newtype', `${baseUrl}:8000/`);
+            // Ollama
+            checkService('dot-ollama', `${baseUrl}:11434/`);
+            // n8n
+            checkService('dot-n8n', `${baseUrl}:5678/`);
+            // Filebrowser
+            checkService('dot-filebrowser', `${baseUrl}:8080/`);
+        }
+
+        async function checkService(dotId, url) {
+            const dot = document.getElementById(dotId);
+            dot.className = 'status-dot checking';
+
+            try {
+                const res = await fetch(url, { mode: 'no-cors' });
+                dot.className = 'status-dot online';
+            } catch (e) {
+                dot.className = 'status-dot offline';
+            }
+        }
+
+        // 초기 로드
+        fetchLogs();
+        checkStatus();
+
+        // 자동 새로고침
+        setInterval(fetchLogs, 3000);
+        setInterval(checkStatus, 10000);
+    </script>
+</body>
+</html>

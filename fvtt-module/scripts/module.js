@@ -4,7 +4,7 @@
  */
 
 const MODULE_ID = 'newtype';
-const MCP_SERVER = 'http://168.107.21.4:8000';
+const API_SERVER = 'http://140.245.68.52:8000';
 
 // ============================================================================
 // State
@@ -126,7 +126,7 @@ async function analyzeAtmosphere() {
   console.log(`[Newtype] Analyzing ${messageBuffer.length} messages...`);
 
   try {
-    const response = await fetch(`${MCP_SERVER}/api/newtype/analyze`, {
+    const response = await fetch(`${API_SERVER}/api/newtype/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: messageBuffer })

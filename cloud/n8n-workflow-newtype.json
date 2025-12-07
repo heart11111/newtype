@@ -1,0 +1,98 @@
+{
+  "name": "Newtype - RP Atmosphere Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "newtype/analyze",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "newtype-analyze"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama3.2\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an RP atmosphere analyzer. Analyze the given roleplay chat messages and determine the current mood/atmosphere. Respond ONLY with valid JSON in this exact format: {\\\"mood\\\": \\\"one of: combat, romance, drama, comedy, mystery, celebration, neutral\\\", \\\"intensity\\\": number 0-100, \\\"is_highlight\\\": boolean, \\\"scene_summary\\\": \\\"brief Korean summary of the scene\\\"}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.body.messages.map(m => m.speaker + ': ' + m.content).join('\\n')) }}\n    }\n  ],\n  \"stream\": false,\n  \"format\": \"json\"\n}",
+        "options": {}
+      },
+      "id": "ollama-1",
+      "name": "Ollama Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ollama 응답 파싱\nconst ollamaResponse = $input.first().json;\nlet result;\n\ntry {\n  // Ollama 응답에서 content 추출\n  const content = ollamaResponse.message?.content || '{}';\n  result = JSON.parse(content);\n} catch (e) {\n  // 파싱 실패 시 기본값\n  result = {\n    mood: 'neutral',\n    intensity: 0,\n    is_highlight: false,\n    scene_summary: 'Unable to analyze'\n  };\n}\n\n// 서버 로그 출력\nconsole.log(`분위기 감지! (${result.mood}, 강도: ${result.intensity}%, 하이라이트: ${result.is_highlight})`);\nconsole.log(`장면 요약: ${result.scene_summary}`);\n\nreturn [{ json: result }];"
+      },
+      "id": "code-1",
+      "name": "Parse & Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-1",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Ollama Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat": {
+      "main": [
+        [
+          {
+            "node": "Parse & Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Log": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0
+}
